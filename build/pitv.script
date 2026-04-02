@@ -1,0 +1,7 @@
+background_image = Image("splash.png");
+bg = Sprite(background_image);
+bg.SetPosition(
+    screen.GetWidth()  / 2 - background_image.GetWidth()  / 2,
+    screen.GetHeight() / 2 - background_image.GetHeight() / 2,
+    -100
+);

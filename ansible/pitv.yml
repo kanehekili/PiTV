@@ -1,0 +1,252 @@
+---
+- name: PiTV kiosk setup
+  hosts: pitv
+  become: true
+
+  vars_prompt:
+    - name: ansible_ssh_pass
+      prompt: "Password"
+      private: true
+
+  vars:
+    app_user: pi
+    app_dir: /home/pi/pitv
+
+  tasks:
+
+    # ── System update ─────────────────────────────────────────────────────────
+
+    - name: Update apt cache and upgrade all packages
+      apt:
+        update_cache: true
+        upgrade: dist
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    # ── Packages ──────────────────────────────────────────────────────────────
+
+    - name: Install Python dependencies
+      apt:
+        name:
+          - python3-flask
+          - python3-websocket
+        state: present
+
+    - name: Install X server and kiosk tools (no recommends)
+      apt:
+        name:
+          - xserver-xorg-video-all
+          - xserver-xorg-input-all
+          - xserver-xorg-core
+          - xinit
+          - x11-xserver-utils
+          - xdotool
+          - chromium
+          - libwidevinecdm0
+          - unclutter
+        state: present
+        install_recommends: false
+
+    - name: Install PulseAudio
+      apt:
+        name: pulseaudio
+        state: present
+
+    - name: Install Plymouth
+      apt:
+        name:
+          - plymouth
+          - plymouth-themes
+        state: present
+
+    # ── Chromium policies ─────────────────────────────────────────────────────
+
+    - name: Create Chromium policy directory
+      file:
+        path: /etc/chromium/policies/managed
+        state: directory
+        mode: '0755'
+
+    - name: Enable protected content (Widevine/DRM) via policy
+      copy:
+        dest: /etc/chromium/policies/managed/pitv.json
+        mode: '0644'
+        content: |
+          {
+            "ProtectedMediaIdentifierEnabled": true
+          }
+
+    # ── App files ─────────────────────────────────────────────────────────────
+
+    - name: Create app directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Deploy app files
+      copy:
+        src: ../src/
+        dest: "{{ app_dir }}/"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+
+    - name: Deploy splash.html with hostname
+      template:
+        src: ../build/splash.html.j2
+        dest: "{{ app_dir }}/splash.html"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+
+    # ── Autologin ─────────────────────────────────────────────────────────────
+
+    - name: Create systemd getty override directory
+      file:
+        path: /etc/systemd/system/getty@tty1.service.d
+        state: directory
+        mode: '0755'
+
+    - name: Configure autologin for {{ app_user }}
+      copy:
+        dest: /etc/systemd/system/getty@tty1.service.d/autologin.conf
+        content: |
+          [Service]
+          ExecStart=
+          ExecStart=-/sbin/agetty --autologin {{ app_user }} --noclear --noissue %I $TERM
+        mode: '0644'
+      notify: Reload systemd
+
+    # ── Silence login messages ────────────────────────────────────────────────
+
+    - name: Create .hushlogin to suppress MOTD and login banner
+      file:
+        path: /home/{{ app_user }}/.hushlogin
+        state: touch
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+      changed_when: false
+
+    # ── X autostart via .bash_profile ─────────────────────────────────────────
+
+    - name: Deploy .bash_profile to start X on tty1
+      copy:
+        dest: /home/{{ app_user }}/.bash_profile
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+        content: |
+          # Auto-start X on tty1 (kiosk mode)
+          if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+            exec >/dev/null 2>&1
+            clear
+            exec startx >/dev/null 2>&1
+          fi
+
+    # ── .xinitrc ──────────────────────────────────────────────────────────────
+
+    - name: Deploy .xinitrc
+      copy:
+        src: ../build/xinitrc
+        dest: /home/{{ app_user }}/.xinitrc
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    # ── PulseAudio default sink ───────────────────────────────────────────────
+
+    - name: Create PulseAudio config directory
+      file:
+        path: /home/{{ app_user }}/.config/pulse
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+      changed_when: false
+
+    - name: Start PulseAudio as {{ app_user }} to detect sinks
+      become_user: "{{ app_user }}"
+      environment:
+        XDG_RUNTIME_DIR: /run/user/1000
+      shell: pulseaudio --start 2>/dev/null; sleep 1
+      changed_when: false
+      ignore_errors: true
+
+    - name: Detect HDMI PulseAudio sink
+      become_user: "{{ app_user }}"
+      environment:
+        XDG_RUNTIME_DIR: /run/user/1000
+      shell: pactl list sinks short | grep -i hdmi | awk '{print $2}' | head -1
+      register: detected_sink
+      changed_when: false
+      ignore_errors: true
+
+    - name: Fail if no HDMI sink found
+      fail:
+        msg: >
+          No HDMI PulseAudio sink detected on the Pi.
+          Run 'pactl list sinks short' manually and set pulse_sink
+          as an extra variable: -e pulse_sink=your_sink_name
+      when:
+        - detected_sink.stdout | trim == ''
+        - pulse_sink is not defined
+
+    - name: Set PulseAudio default HDMI sink
+      copy:
+        dest: /home/{{ app_user }}/.config/pulse/default.pa
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+        content: |
+          .include /etc/pulse/default.pa
+          set-default-sink {{ pulse_sink | default(detected_sink.stdout | trim) }}
+
+    # ── Plymouth splash ───────────────────────────────────────────────────────
+
+    - name: Create Plymouth theme directory
+      file:
+        path: /usr/share/plymouth/themes/pitv
+        state: directory
+        mode: '0755'
+
+    - name: Deploy Plymouth theme files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: '0644'
+      loop:
+        - { src: ../build/pitv.plymouth, dest: /usr/share/plymouth/themes/pitv/pitv.plymouth }
+        - { src: ../build/pitv.script,   dest: /usr/share/plymouth/themes/pitv/pitv.script   }
+        - { src: ../build/splash.png,    dest: /usr/share/plymouth/themes/pitv/splash.png    }
+      notify: Update initramfs
+
+    - name: Set PiTV as default Plymouth theme
+      command: plymouth-set-default-theme pitv
+      register: plymouth_theme
+      changed_when: plymouth_theme.rc != 0
+      notify: Update initramfs
+
+    - name: Read current cmdline.txt
+      slurp:
+        src: /boot/firmware/cmdline.txt
+      register: cmdline_content
+
+    - name: Suppress boot messages in cmdline.txt
+      replace:
+        path: /boot/firmware/cmdline.txt
+        regexp: '(^|\s)(console=tty1)'
+        replace: '\1quiet loglevel=0 splash plymouth.ignore-serial-consoles logo.nologo vt.global_cursor_default=0 console=tty1'
+      when: "'quiet' not in (cmdline_content.content | b64decode)"
+      notify: Update initramfs
+
+  handlers:
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: true
+
+    - name: Update initramfs
+      command: update-initramfs -u

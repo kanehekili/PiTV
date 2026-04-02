@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+plymouth quit --retain-splash
+
+xset -dpms
+xset s off
+xset s noblank
+
+unclutter &
+
+# Start Flask remote control server
+DISPLAY=:0 /usr/bin/python3 /home/pi/pitv/remote.py &
+
+chromium file:///home/pi/pitv/splash.html \
+  --window-size=1920,1080 \
+  --window-position=0,0 \
+  --start-fullscreen \
+  --kiosk \
+  --noerrdialogs \
+  --disable-translate \
+  --no-first-run \
+  --fast \
+  --fast-start \
+  --disable-infobars \
+  --disable-features=TranslateUI \
+  --disk-cache-dir=/dev/null \
+  --overscroll-history-navigation=0 \
+  --disable-pinch \
+  --disable-session-crashed-bubble \
+  --disable-restore-session-state \
+  --remote-debugging-port=9222 \
+  --remote-allow-origins=http://localhost:9222 \
+  --enable-features=ProtectedAPIEncryptedMedia

@@ -1,0 +1,272 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;600&display=swap');
+
+:root {
+  --bg: #0f0f11;
+  --surface: #1a1a1f;
+  --surface2: #24242c;
+  --border: #2e2e38;
+  --accent: #e8ff47;
+  --accent2: #47c8ff;
+  --text: #e8e8f0;
+  --muted: #6b6b80;
+  --pad-bg: #141418;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 10px;
+  gap: 10px;
+}
+
+/* ── TOP BAR ── */
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+#home-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 20px;
+  width: 52px; height: 52px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+#home-btn:active { background: var(--surface2); }
+
+#shutdown-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  width: 52px; height: 52px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  -webkit-touch-callout: none;
+}
+#shutdown-btn:active { background: var(--surface2); }
+#shutdown-btn.armed {
+  border-color: #ff3333;
+  animation: pulse-red 1s ease-in-out infinite;
+}
+
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 6px rgba(255,50,50,0.5); }
+  50%       { box-shadow: 0 0 18px rgba(255,50,50,0.9); }
+}
+
+.spacer { flex: 1; }
+
+#status {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+  width: 60px;
+  flex-shrink: 0;
+}
+#status.ok  { color: var(--accent); }
+#status.err { color: #ff6b6b; }
+
+/* ── LAUNCHER ── */
+#launcher {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 12px;
+  overflow: hidden;
+}
+
+#launcher h2 {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: 'DM Mono', monospace;
+}
+
+#tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  flex: 1;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 20px 12px;
+  transition: background 0.15s, transform 0.1s;
+  min-height: 120px;
+}
+.tile:active { background: var(--surface2); transform: scale(0.97); }
+
+.tile img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.tile-label {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+/* ── REMOTE ── */
+#remote {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  gap: 8px;
+}
+#remote.active { display: flex; }
+
+/* Touchpad */
+#touchpad {
+  flex: 1;
+  background: var(--pad-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  position: relative;
+  touch-action: none;
+}
+
+#pad-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.1em;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+#pad-cursor {
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: opacity 0.2s;
+  opacity: 0;
+  box-shadow: 0 0 12px var(--accent);
+  left: 50%; top: 50%;
+}
+
+/* Control buttons */
+#btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ctrl-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 20px;
+  height: 56px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s, transform 0.1s;
+}
+.ctrl-btn:active { background: var(--surface2); transform: scale(0.95); }
+.ctrl-btn img, #home-btn img { width: 48px; height: 48px; pointer-events: none; }
+ #shutdown-btn img { width: 48px; height: 48px; pointer-events: none; }
+.ctrl-btn.accent  { border-color: var(--accent);  color: var(--accent); }
+.ctrl-btn.accent2 { border-color: var(--accent2); color: var(--accent2); }
+
+/* Keyboard row */
+#kb-row {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+#kb-input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  padding: 0 14px;
+  height: 44px;
+  outline: none;
+  transition: border-color 0.15s;
+  touch-action: auto;
+}
+#kb-input:focus { border-color: var(--accent2); }
+#kb-input::placeholder { color: var(--muted); }
+
+#kb-send {
+  background: var(--accent2);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 16px;
+  width: 44px; height: 44px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+#kb-send:active { opacity: 0.8; }
+
+#kb-enter {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-size: 18px;
+  width: 44px; height: 44px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s;
+  flex-shrink: 0;
+}
+#kb-enter:active { background: var(--surface2); }

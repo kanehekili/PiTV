@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pi Remote</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" type="image/png" href="/icons/favicon-96x96.png" sizes="96x96" />
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+<link rel="shortcut icon" href="/icons/favicon.ico" />
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+<link rel="manifest" href="/icons/site.webmanifest" />
+</head>
+<body>
+<div id="app">
+
+  <!-- Top bar: always visible -->
+  <div id="topbar">
+    <button id="home-btn" title="Back to launcher"><img src="/icons/go-home.svg" alt="Home"></button>
+    <div class="spacer"></div>
+    <button id="shutdown-btn" title="Shutdown"><img src="/icons/exit.png" alt="Power"></button>
+    <div class="spacer"></div>
+    <div id="status">ready</div>
+  </div>
+
+  <!-- Launcher -->
+  <div id="launcher">
+    <h2>select a service</h2>
+    <div id="tiles"><!-- populated from pitv.ini via /tiles --></div>
+  </div>
+
+  <!-- Remote -->
+  <div id="remote">
+    <div id="touchpad">
+      <div id="pad-hint">slide to move cursor</div>
+      <div id="pad-cursor"></div>
+    </div>
+    <div id="btn-row">
+      <button class="ctrl-btn" id="btn-up"><img src="/icons/go-up.svg" alt="Up"></button>
+      <button class="ctrl-btn" id="btn-down"><img src="/icons/go-down.svg" alt="Down"></button>
+      <button class="ctrl-btn accent"  id="btn-lclick">L</button>
+      <button class="ctrl-btn accent2" id="btn-rclick">R</button>
+      <button class="ctrl-btn" id="btn-vol-up">🔊</button>
+      <button class="ctrl-btn" id="btn-vol-down">🔉</button>
+    </div>
+    <div id="kb-row">
+      <input id="kb-input" type="text" placeholder="type here…"
+             autocomplete="off" autocorrect="off"
+             autocapitalize="off" spellcheck="false">
+      <button id="kb-send" title="Send text">↵</button>
+      <button id="kb-enter" title="Send Enter key">⏎</button>
+    </div>
+  </div>
+
+</div>
+<script src="/remote.js"></script>
+</body>
+</html>
